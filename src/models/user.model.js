@@ -1,7 +1,7 @@
- import mongooose ,{Schema, schema} from "mongoose";
+ import mongoose ,{Schema} from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { use } from "react";
+
 
  const userSchema = new Schema({
     username:{
@@ -28,11 +28,11 @@ import { use } from "react";
         required:true
     },
     coverimage:{
-        tyoe:String, //cloudinary url
+        type:String, //cloudinary url
     },
     watchistory:[
         {
-            types:Schema.Types.ObjectId,
+            type:Schema.Types.ObjectId,
             ref:"Video"
         }
     ],
@@ -72,6 +72,6 @@ userSchema.methods.generateAccessToken = function(){
 userSchema.methods.generateRefreshToken = function(){
     return  jwt.sign({
           _id:this._id,
-}),process.env.REFRESH_TOKEN_SECRET,{expiresIn:process.env.REFRESH_TOKEN_EXPIRY}
+},process.env.REFRESH_TOKEN_SECRET,{expiresIn:process.env.REFRESH_TOKEN_EXPIRY})
   }
- export const user = mongoose.model("User",userSchema)
+ export const User = mongoose.model("User",userSchema)
