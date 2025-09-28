@@ -1,16 +1,11 @@
 // src/index.js
 import dotenv from "dotenv";
 
+// ✅ Load env variables before anything else
+dotenv.config({ path: "./.env" });
+
 import connectDB from "./Db/connection.js";
 import app from "./app.js";
-dotenv.config(
-
-  
-  {
-    path: "./.env"
-  }
-);
-
 
 const PORT = process.env.PORT || 8000;
 
