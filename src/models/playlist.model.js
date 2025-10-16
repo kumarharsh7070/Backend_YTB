@@ -16,7 +16,7 @@ const PlaylistSchema = new Schema({
      },
     ],
     owner:{
-        type:Types.ObjectId,
+        type:Schema.Types.ObjectId,
         ref:"User"
      }
 },{timestamps:true})
