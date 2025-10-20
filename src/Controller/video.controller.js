@@ -1,76 +1,108 @@
-import { isValidObjectId } from "mongoose";
-import { User } from "../models/user.model";
-import { Video } from "../models/video.model";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/asyncHandler";
-import { uploadOnCloudinary } from "../utils/cloudinary";
+import mongoose, { isValidObjectId } from "mongoose";
+import fs from "fs";
+import { Video } from "../models/video.model.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
+// GET all videos with pagination, aggregation, and optional query
+const getAllvideo = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    query,
+    sortBy = "createdAt",
+    sortType = "desc",
+    userId,
+  } = req.query;
 
-const getAllvideo = asyncHandler(async(req,res)=>{
-    
-    const {page = 1, limit = 10, query, sortBy = "createdAt", sortType = "desc", userId } = req.query;
-
-
-//  Convert them to numbers to avoid issues
   const pageNum = Number(page);
   const limitNum = Number(limit);
-  
-// Build the aggregation pipeline
 
-const VideoAggregate =  Video.aggregate([
-  {
-    $match:{
-      isPublished: true
-    }
-  },
-  {
-    $lookup:{
-                from:"users",
-                localField:"owner",
-                foreignField:"_id",
-                as:"ownerDetails",
-            }
-    },
+  const VideoAggregate = Video.aggregate([
     {
-      $unwind:"$ownerDetails",
-    },
-    {
-      $sort:{
-        createdAt: -1
+      $match: {
+        isPublished: true,
+        ...(userId && isValidObjectId(userId) ? { owner: mongoose.Types.ObjectId(userId) } : {}),
+        ...(query ? { title: { $regex: query, $options: "i" } } : {}),
       },
     },
     {
-      $project:{
-        _id:1,
-        title:1,
-        description:1,
-        thumbnail:1,
-        videoFile:1,
-        views:1,
-        duration:1,
-        createdAt:1,
-        "ownerDetails.name":1,
-        "ownerDetails.email":1
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
       },
-    }
-  
-]);
+    },
+    { $unwind: "$ownerDetails" },
+    {
+      $sort: {
+        [sortBy]: sortType === "asc" ? 1 : -1,
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        description: 1,
+        thumbnail: 1,
+        videoFile: 1,
+        views: 1,
+        duration: 1,
+        createdAt: 1,
+        "ownerDetails.name": 1,
+        "ownerDetails.email": 1,
+      },
+    },
+  ]);
 
-//  Apply aggregate pagination
+  const options = { page: pageNum, limit: limitNum };
+  const result = await Video.aggregatePaginate(VideoAggregate, options);
 
-const options = {
-    page: pageNum,
-    limit: limitNum,
-  };
-
-  const result = await Video.aggregatePaginate(VideoAggregate, options)
-
-return res
-   .status(200)
-   .json(new ApiResponse(200, result, "All video fetched successfully"));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "All videos fetched successfully"));
 });
 
-export {
-   getAllvideo
-}
+// PUBLISH a new video
+const publishAVideo = asyncHandler(async (req, res) => {
+  const { title, description, duration } = req.body;
+  const { videoFile, thumbnail } = req.files; 
+  const userId = req.user._id; 
+
+  if (!title || !description || !duration || !videoFile || !thumbnail) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "All fields are required"));
+  }
+
+  if (!isValidObjectId(userId)) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, null, "Invalid user ID"));
+  }
+
+  const uploadedVideo = await uploadOnCloudinary(videoFile[0].path, "videos");
+  const uploadedThumbnail = await uploadOnCloudinary(thumbnail[0].path, "thumbnails");
+
+  // Delete local temp files
+  fs.unlinkSync(videoFile[0].path);
+  fs.unlinkSync(thumbnail[0].path);
+
+  const newVideo = await Video.create({
+    title,
+    description,
+    duration,
+    owner: userId,
+    videoFile: uploadedVideo.secure_url,
+    thumbnail: uploadedThumbnail.secure_url,
+    isPublished: true,
+  });
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, newVideo, "Video published successfully"));
+});
+
+export { getAllvideo, publishAVideo };
