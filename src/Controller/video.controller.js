@@ -7,6 +7,7 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 // GET all videos with pagination, aggregation, and optional query
 const getAllvideo = asyncHandler(async (req, res) => {
+  console.log("➡️ getAllvideo called");
   const {
     page = 1,
     limit = 10,
@@ -67,6 +68,7 @@ const getAllvideo = asyncHandler(async (req, res) => {
 
 // PUBLISH a new video
 const publishAVideo = asyncHandler(async (req, res) => {
+  console.log("➡️ publishAVideo called");
   const { title, description, duration } = req.body;
   const { videoFile, thumbnail } = req.files; 
   const userId = req.user._id; 
@@ -87,8 +89,17 @@ const publishAVideo = asyncHandler(async (req, res) => {
   const uploadedThumbnail = await uploadOnCloudinary(thumbnail[0].path, "thumbnails");
 
   // Delete local temp files
-  fs.unlinkSync(videoFile[0].path);
-  fs.unlinkSync(thumbnail[0].path);
+  if (fs.existsSync(videoFile[0].path)) {
+    fs.unlinkSync(videoFile[0].path);
+  } else {
+    console.warn( videoFile[0].path);
+  }
+
+  if (fs.existsSync(thumbnail[0].path)) {
+    fs.unlinkSync(thumbnail[0].path);
+  } else {
+    console.warn( thumbnail[0].path);
+  }
 
   const newVideo = await Video.create({
     title,
