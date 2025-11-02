@@ -1,13 +1,21 @@
 import express from "express";
-import { getAllvideo, publishAVideo, getVideoById } from "../Controller/video.controller.js";
-import { upload } from "../middlewares/Multer.middleware.js"; // your multer middleware
+import {
+  getAllvideo,
+  publishAVideo,
+  getVideoById,
+  updateVideo,
+  deleteVideo // 
+} from "../Controller/video.controller.js";
+
+import { upload } from "../middlewares/Multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+
 const router = express.Router();
 
-// GET all videos
+// 📌 GET all videos
 router.get("/", getAllvideo);
 
-// POST new video (publish) with file upload
+// 📌 POST new video (publish)
 router.post(
   "/publish",
   verifyJWT,
@@ -18,6 +26,22 @@ router.post(
   publishAVideo
 );
 
-// get video by id
+// 📌 GET video by ID
 router.get("/:videoId", getVideoById);
+
+// 📌 PUT update video by ID
+router.put(
+  "/:videoId",
+  verifyJWT,
+  upload.fields([
+    { name: "videoFile", maxCount: 1 },
+    { name: "thumbnail", maxCount: 1 },
+  ]),
+  updateVideo
+);
+
+// delete video
+
+router.delete("/:videoId", verifyJWT, deleteVideo);
+
 export default router;
