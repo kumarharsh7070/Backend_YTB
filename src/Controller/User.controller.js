@@ -106,6 +106,22 @@ const loginUser = asyncHandler(async (req, res) => {
     return res.status(200).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json(new ApiResponse(200, {user: userData, accessToken, refreshToken}, "Login successful"))    
 });
 
+//  Controller to get all users
+const getAllUsers = asyncHandler(async (req, res) => {
+  // 1️⃣ Find all users in the database
+  const users = await User.find().select("-password -refreshToken")
+
+  // 2️⃣ If there are no users, throw an error
+  if (!users.length) {
+    throw new ApiError(404, "No users found")
+  }
+
+  // 3️⃣ Send success response
+  return res
+    .status(200)
+    .json(new ApiResponse(200, users, "All users fetched successfully"))
+})
+
 
 const logoutUser = asyncHandler(async(req, res) =>{
    await User.findByIdAndUpdate(
@@ -128,6 +144,25 @@ const logoutUser = asyncHandler(async(req, res) =>{
     return res.status(200).clearCookie('accessToken', options).clearCookie('refreshToken', options).json(new ApiResponse(200, null, "User Logout successful"))
 
 })
+
+//delete user 
+
+const deleteUser = asyncHandler(async (req,res) =>{
+     const {userId}  = req.params
+
+     const user = await User.findByIdAndDelete(userId)
+
+     if(!user){
+        throw new ApiError(404,'User not found')
+     }
+
+     return res.status(200).json(new ApiResponse(200,{},'User delete successfully'))
+
+
+})
+
+
+
 
 const refreshAccessToken =asyncHandler(async(req,res)=>{
 
@@ -422,5 +457,7 @@ export {
     updateUserAvatar,
     updateUserCoverImage ,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    getAllUsers,
+    deleteUser
 };

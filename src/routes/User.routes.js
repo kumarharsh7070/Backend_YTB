@@ -7,7 +7,7 @@ import { loginUser,  logoutUser,
      updateUserAvatar,
       updateUserCoverImage,
       getUserChannelProfile,
-       getWatchHistory} from "../Controller/User.controller.js";
+       getWatchHistory,getAllUsers,deleteUser} from "../Controller/User.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/Multer.middleware.js";
 const router = Router();
@@ -26,7 +26,8 @@ router.route("/register").post(
     registerUser)
 
 router.route("/login").post(loginUser)
-
+router.get("/all", verifyJWT, getAllUsers)
+router.delete("/:userId", verifyJWT, deleteUser)
  // secure route with jwt
 router.route("/logout").post(verifyJWT, logoutUser)
 router.route("/refresh-token").post(refreshAccessToken)

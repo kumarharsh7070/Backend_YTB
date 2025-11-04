@@ -4,7 +4,9 @@ import {
   publishAVideo,
   getVideoById,
   updateVideo,
-  deleteVideo // 
+  deleteVideo,
+  togglePublishStatus
+
 } from "../Controller/video.controller.js";
 
 import { upload } from "../middlewares/Multer.middleware.js";
@@ -43,5 +45,9 @@ router.put(
 // delete video
 
 router.delete("/:videoId", verifyJWT, deleteVideo);
+
+// togglepublish video
+
+router.patch("/toggle-publish/:videoId", verifyJWT, togglePublishStatus)
 
 export default router;

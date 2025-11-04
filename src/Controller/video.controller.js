@@ -285,4 +285,49 @@ const deleteVideo = asyncHandler(async (req, res) => {
   });
 });
 
-export { getAllvideo, publishAVideo, getVideoById, updateVideo, deleteVideo };
+
+// toggle video
+
+
+const togglePublishStatus = asyncHandler(async (req, res) => {
+  const { videoId } = req.params
+
+  // 1️⃣ Validate ID
+  if (!isValidObjectId(videoId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid video ID",
+    })
+  }
+
+  // 2️⃣ Find the video
+  const video = await Video.findById(videoId)
+  if (!video) {
+    return res.status(404).json({
+      success: false,
+      message: "Video not found",
+    })
+  }
+
+  // 3️⃣ Check owner (authorization)
+  if (video.owner.toString() !== req.user._id.toString()) {
+    return res.status(403).json({
+      success: false,
+      message: "You are not authorized to change this video's status",
+    })
+  }
+
+  // 4️⃣ Toggle publish status
+  video.isPublished = !video.isPublished
+  await video.save()
+
+  // 5️⃣ Send response
+  res.status(200).json({
+    success: true,
+    message: `Video ${video.isPublished ? "published" : "unpublished"} successfully`,
+    video,
+  })
+})
+
+
+export { getAllvideo, publishAVideo, getVideoById, updateVideo, deleteVideo,togglePublishStatus };
