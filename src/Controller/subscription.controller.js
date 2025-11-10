@@ -45,7 +45,76 @@ const toggleSubscription = asyncHandler(async(req,res)=>{
   }
   });
 
-  export {toggleSubscription};
+  const getUserChannelSubscribers = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
+
+  // 1️⃣ Validate input
+  if (!channelId) {
+    return res.status(400).json({
+      success: false,
+      message: "Channel ID is required",
+    });
+  }
+
+  // 2️⃣ Find all subscriptions where 'channel' matches the given ID
+  const subscribers = await Subscription.find({ channel: channelId })
+    .populate("subscriber", "username email avatar") // only include basic info of subscriber
+    .sort({ createdAt: -1 });
+
+  // 3️⃣ If no subscribers
+  if (subscribers.length === 0) {
+    return res.status(200).json({
+      success: true,
+      totalSubscribers: 0,
+      subscribers: [],
+      message: "No subscribers found for this channel",
+    });
+  }
+
+  // 4️⃣ Return data
+  res.status(200).json({
+    success: true,
+    totalSubscribers: subscribers.length,
+    subscribers,
+  });
+});
+
+const getSubscribedChannels = asyncHandler(async (req, res) => {
+  const { subscriberId } = req.params;
+
+  // 1️⃣ Validate input
+  if (!subscriberId) {
+    return res.status(400).json({
+      success: false,
+      message: "Subscriber ID is required",
+    });
+  }
+
+  // 2️⃣ Find all subscriptions where this user is the subscriber
+  const subscriptions = await Subscription.find({ subscriber: subscriberId })
+    .populate("channel", "username email avatar") // show channel details
+    .sort({ createdAt: -1 });
+
+  // 3️⃣ If no subscriptions found
+  if (subscriptions.length === 0) {
+    return res.status(200).json({
+      success: true,
+      totalChannels: 0,
+      subscribedChannels: [],
+      message: "User is not subscribed to any channels",
+    });
+  }
+
+  // 4️⃣ Return list of channels and count
+  res.status(200).json({
+    success: true,
+    totalChannels: subscriptions.length,
+    subscribedChannels: subscriptions.map((sub) => sub.channel),
+  });
+});
+
+
+  export {toggleSubscription,getUserChannelSubscribers,getSubscribedChannels};
 
 
 
