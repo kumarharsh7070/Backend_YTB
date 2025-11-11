@@ -20,10 +20,12 @@ import UserRoutes from './routes/User.routes.js';
 import VideoRoutes from "./routes/video.routes.js"
 import ToggleRoutes from "./routes/subscription.routes.js"
 import Liketoggle from "./routes/like.routes.js"
+import Comment from "./routes/comment.routes.js"
 // router declare
 app.use('/api/v1/users',UserRoutes);
 app.use('/api/v1/videos', VideoRoutes); 
 app.use('/api/v1/toggle',ToggleRoutes);
 app.use("/api/v1/likes", Liketoggle)
+app.use("/api/v1/comment",Comment)
 
 export default app;
