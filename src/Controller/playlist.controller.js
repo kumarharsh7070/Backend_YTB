@@ -5,136 +5,248 @@ import { Playlist } from "../models/playlist.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const createPlaylist = asyncHandler(async (req, res) => {
-    const { name, description } = req.body;
+  const { name, description } = req.body;
 
-    if (!name) {
-        return res.status(400).json({
-            success: false,
-            message: "Playlist name is required"
-        });
-    }
-
-    const playlist = await Playlist.create({
-        name,
-        description: description || "",
-        owner: req.user._id,   // make sure route is protected
-        videos: []
+  if (!name) {
+    return res.status(400).json({
+      success: false,
+      message: "Playlist name is required",
     });
+  }
 
-    return res.status(201).json({
-        success: true,
-        message: "Playlist created successfully",
-        data: playlist
-    });
+  const playlist = await Playlist.create({
+    name,
+    description: description || "",
+    owner: req.user._id, // ensure route is protected
+    videos: [],
+  });
+
+  return res.status(201).json({
+    success: true,
+    message: "Playlist created successfully",
+    data: playlist,
+  });
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
-    const { userId } = req.params;
+  const { userId } = req.params;
 
-    if (!userId) {
-        return res.status(400).json({
-            success: false,
-            message: "User ID is required"
-        });
-    }
-
-    const playlists = await Playlist.find({ owner: userId })
-        .populate("videos")
-        .exec();
-
-    return res.status(200).json({
-        success: true,
-        message: "User playlists fetched successfully",
-        data: playlists
+  if (!userId) {
+    return res.status(400).json({
+      success: false,
+      message: "User ID is required",
     });
+  }
+
+  const playlists = await Playlist.find({ owner: userId }).populate("videos").exec();
+
+  return res.status(200).json({
+    success: true,
+    message: "User playlists fetched successfully",
+    data: playlists,
+  });
 });
-
-//get by id---------
-
 
 const getPlaylistById = asyncHandler(async (req, res) => {
-    const { playlistId } = req.params;
+  const { playlistId } = req.params;
 
-    // 1. validate playlist id
-    if (!playlistId || !isValidObjectId(playlistId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Valid playlist ID is required"
-        });
-    }
-
-    // 2. fetch playlist
-    const playlist = await Playlist.findById(playlistId)
-        .populate("videos")  // optional
-        .populate("owner", "username email") // optional
-        .exec();
-
-    // 3. if playlist not found
-    if (!playlist) {
-        return res.status(404).json({
-            success: false,
-            message: "Playlist not found"
-        });
-    }
-
-    // 4. return playlist
-    return res.status(200).json({
-        success: true,
-        message: "Playlist fetched successfully",
-        data: playlist
+  if (!playlistId || !isValidObjectId(playlistId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid playlist ID is required",
     });
+  }
+
+  const playlist = await Playlist.findById(playlistId)
+    .populate("videos")
+    .populate("owner", "username email")
+    .exec();
+
+  if (!playlist) {
+    return res.status(404).json({
+      success: false,
+      message: "Playlist not found",
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "Playlist fetched successfully",
+    data: playlist,
+  });
 });
-
-//add video to playlist
-
 
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
-    const { playlistId, videoId } = req.params;
+  const { playlistId, videoId } = req.params;
 
-    // 1. validate IDs
-    if (!playlistId || !isValidObjectId(playlistId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Valid playlistId is required"
-        });
-    }
-
-    if (!videoId || !isValidObjectId(videoId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Valid videoId is required"
-        });
-    }
-
-    // 2. find playlist
-    const playlist = await Playlist.findById(playlistId);
-
-    if (!playlist) {
-        return res.status(404).json({
-            success: false,
-            message: "Playlist not found"
-        });
-    }
-
-    // 3. check if video already exists
-    if (playlist.videos.includes(videoId)) {
-        return res.status(400).json({
-            success: false,
-            message: "Video already in playlist"
-        });
-    }
-
-    // 4. add video
-    playlist.videos.push(videoId);
-    await playlist.save();
-
-    return res.status(200).json({
-        success: true,
-        message: "Video added to playlist successfully",
-        data: playlist
+  if (!playlistId || !isValidObjectId(playlistId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid playlistId is required",
     });
+  }
+
+  if (!videoId || !isValidObjectId(videoId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid videoId is required",
+    });
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+
+  if (!playlist) {
+    return res.status(404).json({
+      success: false,
+      message: "Playlist not found",
+    });
+  }
+
+  // safer check when videos are ObjectIds
+  if (playlist.videos.some((v) => v.toString() === videoId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Video already in playlist",
+    });
+  }
+
+  playlist.videos.push(videoId);
+  await playlist.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Video added to playlist successfully",
+    data: playlist,
+  });
 });
 
+const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
+  const { playlistId, videoId } = req.params;
 
+  if (!playlistId || !isValidObjectId(playlistId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid playlistId is required",
+    });
+  }
 
-export { createPlaylist, getUserPlaylists,getPlaylistById,addVideoToPlaylist };
+  if (!videoId || !isValidObjectId(videoId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid videoId is required",
+    });
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+
+  if (!playlist) {
+    return res.status(404).json({
+      success: false,
+      message: "Playlist not found",
+    });
+  }
+
+  const index = playlist.videos.findIndex((v) => v.toString() === videoId);
+  if (index === -1) {
+    return res.status(404).json({
+      success: false,
+      message: "Video not found in playlist",
+    });
+  }
+
+  playlist.videos.splice(index, 1);
+  await playlist.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Video removed from playlist successfully",
+    data: playlist,
+  });
+});
+
+const deletePlaylist = asyncHandler(async (req, res) => {
+  const { playlistId } = req.params;
+
+  if (!playlistId || !isValidObjectId(playlistId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid playlistId is required",
+    });
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+
+  if (!playlist) {
+    return res.status(404).json({
+      success: false,
+      message: "Playlist not found",
+    });
+  }
+
+  // Optional: ensure only owner can delete
+  if (req.user && playlist.owner.toString() !== req.user._id.toString()) {
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized to delete this playlist",
+    });
+  }
+
+  await playlist.remove();
+
+  return res.status(200).json({
+    success: true,
+    message: "Playlist deleted successfully",
+    data: null,
+  });
+});
+
+const updatePlaylist = asyncHandler(async (req, res) => {
+  const { playlistId } = req.params;
+  const { name, description } = req.body;
+
+  if (!playlistId || !isValidObjectId(playlistId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid playlistId is required",
+    });
+  }
+
+  const playlist = await Playlist.findById(playlistId);
+
+  if (!playlist) {
+    return res.status(404).json({
+      success: false,
+      message: "Playlist not found",
+    });
+  }
+
+  if (req.user && playlist.owner.toString() !== req.user._id.toString()) {
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized to update this playlist",
+    });
+  }
+
+  if (name) playlist.name = name;
+  if (description !== undefined) playlist.description = description;
+
+  await playlist.save();
+
+  const populated = await Playlist.findById(playlistId).populate("videos").populate("owner", "username email");
+
+  return res.status(200).json({
+    success: true,
+    message: "Playlist updated successfully",
+    data: populated,
+  });
+});
+
+export {
+  createPlaylist,
+  getUserPlaylists,
+  getPlaylistById,
+  addVideoToPlaylist,
+  removeVideoFromPlaylist,
+  deletePlaylist,
+  updatePlaylist,
+};
