@@ -22,6 +22,7 @@ import ToggleRoutes from "./routes/subscription.routes.js"
 import Liketoggle from "./routes/like.routes.js"
 import Comment from "./routes/comment.routes.js"
 import  Playlist  from "./routes/playlist.routes.js"
+import  Tweetroutes  from './routes/tweet.routes.js'
 // router declare
 app.use('/api/v1/users',UserRoutes);
 app.use('/api/v1/videos', VideoRoutes); 
@@ -29,5 +30,6 @@ app.use('/api/v1/toggle',ToggleRoutes);
 app.use("/api/v1/likes", Liketoggle)
 app.use("/api/v1/comment",Comment)
 app.use("/api/v1/playlists", Playlist);
+app.use("/api/v1/tweet",Tweetroutes)
 
 export default app;
