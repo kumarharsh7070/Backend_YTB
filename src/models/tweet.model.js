@@ -9,6 +9,6 @@ const TweetSchema = new Schema({
         type:Schema.Types.ObjectId,
         ref:"User"
     }
-},{time:true})
+},{timestamps:true})
 
 export const Tweet = mongoose.model("Tweet",TweetSchema)
