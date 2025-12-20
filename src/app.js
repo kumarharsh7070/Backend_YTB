@@ -32,4 +32,12 @@ app.use("/api/v1/comment",Comment)
 app.use("/api/v1/playlists", Playlist);
 app.use("/api/v1/tweet",Tweetroutes)
 
+// to test only for fronted api
+
+app.get("/api/v1/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Backend is running 🚀",
+  });
+});
 export default app;
