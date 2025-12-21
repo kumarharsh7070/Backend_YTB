@@ -90,6 +90,8 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Invalid password");
     }
 
+     console.log("User logged in:", user.email);
+
     const{accessToken, refreshToken} = await generateAccessAndRefreshToken(user._id)
     if(!accessToken || !refreshToken){
         throw new ApiError(500, "Failed to generate tokens");
