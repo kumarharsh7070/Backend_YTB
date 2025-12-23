@@ -1,5 +1,7 @@
 import { useState } from "react";
 import api from "../api/axios";
+import { Link } from "react-router-dom";
+
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -73,6 +75,16 @@ const Login = () => {
           >
             {loading ? "Logging in..." : "Login"}
           </button>
+          <p className="text-gray-400 text-sm text-center mt-4">
+  Forgot your password?{" "}
+  <Link
+    to="/forgot-password"
+    className="text-red-500 hover:underline"
+  >
+    Reset here
+  </Link>
+</p>
+
         </form>
       </div>
     </div>

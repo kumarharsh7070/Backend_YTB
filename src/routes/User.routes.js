@@ -7,7 +7,7 @@ import { loginUser,  logoutUser,
      updateUserAvatar,
       updateUserCoverImage,
       getUserChannelProfile,
-       getWatchHistory,getAllUsers,deleteUser} from "../Controller/User.controller.js";
+       getWatchHistory,getAllUsers,deleteUser,forgotPassword,resetPassword} from "../Controller/User.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/Multer.middleware.js";
 const router = Router();
@@ -38,4 +38,7 @@ router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvat
 router.route("/cover-image").patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage)
 router.route("/c/:username").get(verifyJWT,getUserChannelProfile)
 router.route("/history").get(verifyJWT, getWatchHistory)
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password/:token", resetPassword);
+
  export default router;
