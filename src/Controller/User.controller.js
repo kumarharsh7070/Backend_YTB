@@ -6,6 +6,8 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
 import crypto from "crypto";
+import sendEmail from "../utils/sendEmail.js";
+
 
 
 const generateAccessAndRefreshToken = async(userId) =>{
@@ -465,27 +467,42 @@ const forgotPassword = asyncHandler(async (req, res) => {
         throw new ApiError(404, "User not found");
     }
 
-    // generate reset token
+    // 1️⃣ Generate reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
 
-    // hash token before saving
+    // 2️⃣ Hash token before saving to DB
     user.forgotPasswordToken = crypto
         .createHash("sha256")
         .update(resetToken)
         .digest("hex");
 
-    user.forgotPasswordExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    // 3️⃣ Token expiry (10 minutes)
+    user.forgotPasswordExpiry = Date.now() + 10 * 60 * 1000;
 
     await user.save({ validateBeforeSave: false });
 
-    // for development (later replace with email)
-    console.log("Forgot password token:", email);
+    // 4️⃣ Create reset link (frontend)
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    // 5️⃣ Send email
+    await sendEmail({
+        to: user.email,
+        subject: "Reset your password",
+        html: `
+            <h2>Password Reset Request</h2>
+            <p>You requested to reset your password.</p>
+            <p>Click the link below to set a new password:</p>
+            <a href="${resetLink}" target="_blank">${resetLink}</a>
+            <p>This link will expire in 10 minutes.</p>
+            <p>If you did not request this, please ignore this email.</p>
+        `,
+    });
 
     return res.status(200).json(
         new ApiResponse(
             200,
             {},
-            "Password reset token generated (check backend console)"
+            "Password reset link sent to your email"
         )
     );
 });
