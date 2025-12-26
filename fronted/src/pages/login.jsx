@@ -84,6 +84,12 @@ const Login = () => {
     Reset here
   </Link>
 </p>
+<p className="text-gray-400 text-sm text-center mt-4">
+  New here?{" "}
+  <Link to="/register" className="text-red-500 hover:underline">
+    Create an account
+  </Link>
+</p>
 
         </form>
       </div>
