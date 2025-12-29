@@ -1,6 +1,8 @@
 import { useState } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+
 
 
 const Login = () => {
@@ -9,31 +11,34 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const navigate = useNavigate();
 
-    try {
-      const res = await api.post("/users/login", {
-        email,
-        password,
-      });
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-      // store access token
-      localStorage.setItem(
-        "token",
-        res.data.data.accessToken
-      );
+  try {
+    const res = await api.post("/users/login", {
+      email,
+      password,
+    });
 
-      alert("Login successful 🚀");
+    // store access token
+    localStorage.setItem(
+      "token",
+      res.data.data.accessToken
+    );
 
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+    // ✅ GO TO HOME PAGE
+    navigate("/");
+
+  } catch (err) {
+    setError(err.response?.data?.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-black via-gray-900 to-gray-800">
