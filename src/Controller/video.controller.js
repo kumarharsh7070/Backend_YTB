@@ -28,34 +28,44 @@ const getAllvideo = asyncHandler(async (req, res) => {
         ...(query ? { title: { $regex: query, $options: "i" } } : {}),
       },
     },
-    {
-      $lookup: {
-        from: "users",
-        localField: "owner",
-        foreignField: "_id",
-        as: "ownerDetails",
-      },
-    },
-    { $unwind: "$ownerDetails" },
-    {
-      $sort: {
-        [sortBy]: sortType === "asc" ? 1 : -1,
-      },
-    },
-    {
-      $project: {
-        _id: 1,
-        title: 1,
-        description: 1,
-        thumbnail: 1,
-        videoFile: 1,
-        views: 1,
-        duration: 1,
-        createdAt: 1,
-        "ownerDetails.name": 1,
-        "ownerDetails.email": 1,
-      },
-    },
+     {
+    $lookup: {
+      from: "users",
+      localField: "owner",
+      foreignField: "_id",
+      as: "ownerDetails",
+      pipeline: [
+        {
+          $project: {
+            username: 1,
+            avatar: 1,
+            email: 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    $unwind: "$ownerDetails"
+  },
+  {
+    $sort: {
+      [sortBy]: sortType === "asc" ? 1 : -1
+    }
+  },
+  {
+    $project: {
+      _id: 1,
+      title: 1,
+      description: 1,
+      thumbnail: 1,
+      videoFile: 1,
+      views: 1,
+      duration: 1,
+      createdAt: 1,
+      ownerDetails: 1  
+    }
+  }
   ]);
 
   const options = { page: pageNum, limit: limitNum };
@@ -128,7 +138,7 @@ const getVideoById = asyncHandler(async (req, res) => {
   }
 
   const video = await Video.findById(videoId)
-    .populate("owner", "name email")
+    .populate("owner", "username avatar email") // ✅ FIX HERE
     .lean();
 
   if (!video) {
@@ -137,11 +147,12 @@ const getVideoById = asyncHandler(async (req, res) => {
       .json(new ApiResponse(404, null, "Video not found"));
   }
 
+  // 🔥 Increment views
   await Video.findByIdAndUpdate(videoId, { $inc: { views: 1 } });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, video, "Video fetched by id successfully"));
+  return res.status(200).json(
+    new ApiResponse(200, video, "Video fetched by id successfully")
+  );
 });
 
 // UpdateVideo

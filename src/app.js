@@ -26,7 +26,7 @@ import  Tweetroutes  from './routes/tweet.routes.js'
 // router declare
 app.use('/api/v1/users',UserRoutes);
 app.use('/api/v1/videos', VideoRoutes); 
-app.use('/api/v1/toggle',ToggleRoutes);
+app.use('/api/v1/subscriptions',ToggleRoutes);
 app.use("/api/v1/likes", Liketoggle)
 app.use("/api/v1/comment",Comment)
 app.use("/api/v1/playlists", Playlist);

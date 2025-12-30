@@ -31,8 +31,6 @@ const Home = () => {
     api
       .get("/videos")
       .then((res) => {
-        console.log("VIDEOS API RESPONSE 👉", res.data);
-
         let videoArray = [];
 
         if (Array.isArray(res.data?.data?.docs)) {
@@ -41,8 +39,7 @@ const Home = () => {
 
         setVideos(videoArray);
       })
-      .catch((err) => {
-        console.error("Failed to fetch videos", err);
+      .catch(() => {
         setVideos([]);
       })
       .finally(() => {
@@ -126,6 +123,7 @@ const Home = () => {
                 key={video._id}
                 className="bg-gray-900 rounded-lg overflow-hidden shadow hover:scale-105 transition"
               >
+                {/* Thumbnail */}
                 <Link to={`/watch/${video._id}`}>
                   <img
                     src={video.thumbnail}
@@ -134,14 +132,23 @@ const Home = () => {
                   />
                 </Link>
 
+                {/* Video info */}
                 <div className="p-4">
                   <h3 className="font-semibold truncate">
                     {video.title}
                   </h3>
 
-                  <p className="text-sm text-gray-400">
-                    {video.ownerDetails?.email || "Unknown Channel"}
-                  </p>
+                  {/* Channel info */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <img
+                      src={video.ownerDetails?.avatar}
+                      alt="channel"
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                    <span className="text-sm text-gray-400">
+                      {video.ownerDetails?.username || "Unknown Channel"}
+                    </span>
+                  </div>
 
                   <p className="text-xs text-gray-500 mt-1">
                     {(video.views || 0).toLocaleString()} views •{" "}
