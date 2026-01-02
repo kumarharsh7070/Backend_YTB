@@ -5,7 +5,8 @@ import {
   getVideoById,
   updateVideo,
   deleteVideo,
-  togglePublishStatus
+  togglePublishStatus,
+  getChannelVideos
 
 } from "../Controller/video.controller.js";
 
@@ -49,5 +50,8 @@ router.delete("/:videoId", verifyJWT, deleteVideo);
 // togglepublish video
 
 router.patch("/toggle-publish/:videoId", verifyJWT, togglePublishStatus)
+
+router.get("/channel/:channelId", getChannelVideos);
+
 
 export default router;

@@ -13,17 +13,17 @@ const Home = () => {
 
   // ================= FETCH CURRENT USER =================
   useEffect(() => {
-    if (token) {
-      api
-        .get("/users/current-user")
-        .then((res) => {
-          setUser(res.data?.data || null);
-        })
-        .catch(() => {
-          localStorage.removeItem("token");
-          setUser(null);
-        });
-    }
+    if (!token) return;
+
+    api
+      .get("/users/current-user")
+      .then((res) => {
+        setUser(res.data?.data || null);
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        setUser(null);
+      });
   }, [token]);
 
   // ================= FETCH VIDEOS =================
@@ -31,20 +31,14 @@ const Home = () => {
     api
       .get("/videos")
       .then((res) => {
-        let videoArray = [];
-
         if (Array.isArray(res.data?.data?.docs)) {
-          videoArray = res.data.data.docs;
+          setVideos(res.data.data.docs);
+        } else {
+          setVideos([]);
         }
-
-        setVideos(videoArray);
       })
-      .catch(() => {
-        setVideos([]);
-      })
-      .finally(() => {
-        setLoadingVideos(false);
-      });
+      .catch(() => setVideos([]))
+      .finally(() => setLoadingVideos(false));
   }, []);
 
   // ================= LOGOUT =================
@@ -74,31 +68,31 @@ const Home = () => {
           </div>
         ) : (
           <div className="flex items-center gap-4">
+
+            {/* 👤 USER → CHANNEL PAGE */}
             {user && (
-              <div className="flex items-center gap-2">
+              <Link
+                to={`/channel/${user.username}`}
+                className="flex items-center gap-2 hover:bg-gray-800 px-3 py-1 rounded transition"
+              >
                 <img
                   src={user.avatar}
                   alt="avatar"
                   className="w-8 h-8 rounded-full object-cover"
                 />
-                <span className="text-sm">{user.username}</span>
-              </div>
+                <span className="text-sm font-medium">
+                  {user.username}
+                </span>
+              </Link>
             )}
 
-            <Link to="/upload" className="px-4 py-2 bg-indigo-600 rounded">
-              Upload
-            </Link>
+            {/* Upload */}
+          
 
-            <Link
-              to="/change-password"
-              className="px-4 py-2 bg-gray-800 rounded"
-            >
-              Update Password
-            </Link>
-
+            {/* Logout */}
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 rounded"
+              className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
             >
               Logout
             </button>

@@ -9,7 +9,8 @@ import ChangePassword from "./pages/ChangePassword";
 import UploadVideo from "./pages/UploadVideo";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import WatchVideo from "./pages/WatchVideo";
-
+import Channel from "./pages/Channel";
+import EditProfile from "./pages/EditProfile";
 function App() {
   return (
     <Routes>
@@ -21,7 +22,10 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/watch/:videoId" element={<WatchVideo />} />
+      
       {/* Protected routes */}
+      <Route path="/channel/:username" element={<Channel />} />
+      <Route path="/edit-profile" element={<EditProfile />} />
       <Route
         path="/change-password"
         element={

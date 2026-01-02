@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
 const WatchVideo = () => {
   const { videoId } = useParams();
+  const navigate = useNavigate();
+
   const token = localStorage.getItem("token");
 
   const [video, setVideo] = useState(null);
@@ -66,7 +68,7 @@ const WatchVideo = () => {
   /* ================= SUBSCRIBE / UNSUBSCRIBE ================= */
   const handleSubscribe = async () => {
     if (!token) {
-      alert("Please login to subscribe");
+      navigate("/login");
       return;
     }
 
@@ -78,7 +80,7 @@ const WatchVideo = () => {
       // instant UI update
       setIsSubscribed((prev) => !prev);
       setSubscribersCount((prev) =>
-        isSubscribed ? prev - 1 : prev + 1
+        isSubscribed ? Math.max(prev - 1, 0) : prev + 1
       );
     } catch {
       alert("Failed to update subscription");
@@ -128,27 +130,29 @@ const WatchVideo = () => {
           {new Date(video.createdAt).toDateString()}
         </p>
 
-        {/* 👤 CHANNEL INFO */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <img
-              src={video.owner?.avatar}
-              alt="channel"
-              className="w-12 h-12 rounded-full object-cover"
-            />
+        {/* 👤 CHANNEL INFO + SUBSCRIBE */}
+        <div className="flex items-center justify-between mt-6 mb-6">
+          {video.owner?._id && (
+            <Link to={`/channel/${video.owner.username}`}
+              className="flex items-center gap-4"
+            >
+              <img
+                src={video.owner.avatar}
+                alt="channel"
+                className="w-12 h-12 rounded-full object-cover"
+              />
+              <div>
+                <p className="font-semibold hover:underline">
+                  {video.owner.username}
+                </p>
+                <p className="text-sm text-gray-400 flex items-center gap-1">
+                  👤 {subscribersCount.toLocaleString()} subscribers
+                </p>
+              </div>
+            </Link>
+          )}
 
-            <div>
-              <p className="font-semibold">
-                {video.owner?.username}
-              </p>
-
-              <p className="text-sm text-gray-400 flex items-center gap-1">
-                👤 {subscribersCount.toLocaleString()} subscribers
-              </p>
-            </div>
-          </div>
-
-          {/* 🚫 Hide subscribe button for own channel */}
+          {/* 🚫 Hide Subscribe button for own channel */}
           {!isOwnChannel && (
             <button
               onClick={handleSubscribe}
@@ -157,7 +161,7 @@ const WatchVideo = () => {
                 isSubscribed
                   ? "bg-gray-700 text-white"
                   : "bg-red-600 hover:bg-red-700 text-white"
-              }`}
+              } ${subLoading ? "opacity-70 cursor-not-allowed" : ""}`}
             >
               {subLoading
                 ? "Please wait..."

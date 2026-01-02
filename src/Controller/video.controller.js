@@ -340,5 +340,22 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
   })
 })
 
+// get channel
 
-export { getAllvideo, publishAVideo, getVideoById, updateVideo, deleteVideo,togglePublishStatus };
+const getChannelVideos = asyncHandler(async (req, res) => {
+  const { channelId } = req.params;
+
+  if (!channelId) {
+    throw new ApiError(400, "Channel ID is required");
+  }
+
+  const videos = await Video.find({ owner: channelId })
+    .sort({ createdAt: -1 })
+    .populate("owner", "username avatar");
+
+  return res.status(200).json(
+    new ApiResponse(200, videos, "Channel videos fetched successfully")
+  );
+});
+
+export { getAllvideo, publishAVideo, getVideoById, updateVideo, deleteVideo,togglePublishStatus,getChannelVideos };
