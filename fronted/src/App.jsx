@@ -11,6 +11,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import WatchVideo from "./pages/WatchVideo";
 import Channel from "./pages/Channel";
 import EditProfile from "./pages/EditProfile";
+import EditVideo from "./pages/EditVideo";
 function App() {
   return (
     <Routes>
@@ -26,6 +27,7 @@ function App() {
       {/* Protected routes */}
       <Route path="/channel/:username" element={<Channel />} />
       <Route path="/edit-profile" element={<EditProfile />} />
+<Route path="/edit-video/:videoId" element={<EditVideo />} />
       <Route
         path="/change-password"
         element={

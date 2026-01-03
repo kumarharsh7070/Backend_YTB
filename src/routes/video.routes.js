@@ -18,6 +18,12 @@ const router = express.Router();
 // 📌 GET all videos
 router.get("/", getAllvideo);
 
+// 📌 GET channel videos (MOVE UP ⬆️)
+router.get("/channel/:channelId", getChannelVideos);
+
+// 📌 GET video by ID
+router.get("/:videoId", getVideoById);
+
 // 📌 POST new video (publish)
 router.post(
   "/publish",
@@ -29,10 +35,7 @@ router.post(
   publishAVideo
 );
 
-// 📌 GET video by ID
-router.get("/:videoId", getVideoById);
-
-// 📌 PUT update video by ID
+// 📌 UPDATE video
 router.put(
   "/:videoId",
   verifyJWT,
@@ -43,15 +46,10 @@ router.put(
   updateVideo
 );
 
-// delete video
-
+// 📌 DELETE video
 router.delete("/:videoId", verifyJWT, deleteVideo);
 
-// togglepublish video
-
-router.patch("/toggle-publish/:videoId", verifyJWT, togglePublishStatus)
-
-router.get("/channel/:channelId", getChannelVideos);
-
+// 📌 TOGGLE publish status
+router.patch("/toggle-publish/:videoId", verifyJWT, togglePublishStatus);
 
 export default router;

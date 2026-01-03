@@ -15,6 +15,7 @@ const Channel = () => {
   const [subLoading, setSubLoading] = useState(false);
 
   const [currentUser, setCurrentUser] = useState(null);
+  const [activeTab, setActiveTab] = useState("videos"); // ✅ TAB STATE
 
   /* ================= FETCH CURRENT USER ================= */
   useEffect(() => {
@@ -51,22 +52,31 @@ const Channel = () => {
 
   /* ================= SUBSCRIBE / UNSUBSCRIBE ================= */
   const handleSubscribe = async () => {
-    if (!token) {
-      alert("Please login to subscribe");
-      return;
-    }
+    if (!token) return alert("Please login");
 
     setSubLoading(true);
     try {
       await api.post(`/subscriptions/${channel._id}`);
       setIsSubscribed((prev) => !prev);
       setSubscribersCount((prev) =>
-        isSubscribed ? prev - 1 : prev + 1
+        isSubscribed ? Math.max(prev - 1, 0) : prev + 1
       );
     } catch {
       alert("Failed to update subscription");
     } finally {
       setSubLoading(false);
+    }
+  };
+
+  /* ================= DELETE VIDEO ================= */
+  const handleDeleteVideo = async (videoId) => {
+    if (!window.confirm("Delete this video?")) return;
+
+    try {
+      await api.delete(`/videos/${videoId}`);
+      setVideos((prev) => prev.filter((v) => v._id !== videoId));
+    } catch {
+      alert("Failed to delete video");
     }
   };
 
@@ -91,14 +101,13 @@ const Channel = () => {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
 
-      {/* ================= BANNER ================= */}
+      {/* ================= COVER ================= */}
       <div className="h-48 bg-gradient-to-r from-red-600 via-pink-600 to-purple-600"></div>
 
-      {/* ================= CHANNEL HEADER ================= */}
+      {/* ================= HEADER ================= */}
       <div className="max-w-6xl mx-auto px-6 -mt-16">
-        <div className="bg-gray-900 p-6 rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-lg">
+        <div className="bg-gray-900 p-6 rounded-xl shadow-lg flex flex-col md:flex-row md:items-center md:justify-between gap-6">
 
-          {/* Left */}
           <div className="flex items-center gap-6">
             <img
               src={channel.avatar}
@@ -107,34 +116,23 @@ const Channel = () => {
             />
 
             <div>
-              <h1 className="text-3xl font-bold">
-                {channel.username}
-              </h1>
-
-              <p className="text-gray-400 mt-1 flex items-center gap-1">
+              <h1 className="text-3xl font-bold">{channel.username}</h1>
+              <p className="text-gray-400 mt-1">
                 👤 {subscribersCount.toLocaleString()} subscribers
               </p>
             </div>
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-4">
-
+          <div className="flex gap-3">
             {isOwnChannel ? (
               <>
                 <Link
                   to="/upload"
                   className="px-5 py-2 bg-indigo-600 rounded hover:bg-indigo-700"
                 >
-                  Upload Video
+                  Upload
                 </Link>
 
-                <Link
-                  to="/change-password"
-                  className="px-5 py-2 bg-gray-800 rounded hover:bg-gray-700"
-                >
-                  Update Password
-                </Link>
                 <Link
                   to="/edit-profile"
                   className="px-5 py-2 bg-gray-800 rounded hover:bg-gray-700"
@@ -146,7 +144,7 @@ const Channel = () => {
               <button
                 onClick={handleSubscribe}
                 disabled={subLoading}
-                className={`px-6 py-2 rounded font-semibold transition ${
+                className={`px-6 py-2 rounded ${
                   isSubscribed
                     ? "bg-gray-700"
                     : "bg-red-600 hover:bg-red-700"
@@ -159,48 +157,107 @@ const Channel = () => {
                   : "Subscribe"}
               </button>
             )}
-
           </div>
         </div>
       </div>
 
-      {/* ================= VIDEOS SECTION ================= */}
+      {/* ================= TABS ================= */}
+      <div className="max-w-6xl mx-auto px-6 mt-8 border-b border-gray-800 flex gap-8">
+        <button
+          onClick={() => setActiveTab("videos")}
+          className={`pb-3 ${
+            activeTab === "videos"
+              ? "border-b-2 border-white text-white"
+              : "text-gray-400"
+          }`}
+        >
+          Videos
+        </button>
+
+        <button
+          onClick={() => setActiveTab("about")}
+          className={`pb-3 ${
+            activeTab === "about"
+              ? "border-b-2 border-white text-white"
+              : "text-gray-400"
+          }`}
+        >
+          About
+        </button>
+      </div>
+
+      {/* ================= TAB CONTENT ================= */}
       <div className="max-w-6xl mx-auto p-8">
 
-        <h2 className="text-xl font-semibold mb-6">
-          Videos
-        </h2>
+        {/* VIDEOS TAB */}
+        {activeTab === "videos" && (
+          <>
+            {videos.length === 0 ? (
+              <p className="text-gray-400">No videos uploaded yet</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {videos.map((video) => (
+                  <div
+                    key={video._id}
+                    className="bg-gray-900 rounded-lg overflow-hidden hover:scale-105 transition"
+                  >
+                    <Link to={`/watch/${video._id}`}>
+                      <img
+                        src={video.thumbnail}
+                        alt={video.title}
+                        className="w-full h-40 object-cover"
+                      />
+                    </Link>
 
-        {videos.length === 0 ? (
-          <p className="text-gray-400">
-            No videos uploaded yet
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {videos.map((video) => (
-              <Link
-                key={video._id}
-                to={`/watch/${video._id}`}
-                className="bg-gray-900 rounded-lg overflow-hidden hover:scale-105 transition"
-              >
-                <img
-                  src={video.thumbnail}
-                  alt={video.title}
-                  className="w-full h-40 object-cover"
-                />
+                    <div className="p-4">
+                      <h3 className="font-semibold truncate">{video.title}</h3>
 
-                <div className="p-4">
-                  <h3 className="font-semibold truncate">
-                    {video.title}
-                  </h3>
+                      <p className="text-sm text-gray-400 mt-1">
+                        {(video.views || 0).toLocaleString()} views •{" "}
+                        {new Date(video.createdAt).toDateString()}
+                      </p>
 
-                  <p className="text-sm text-gray-400 mt-1">
-                    {(video.views || 0).toLocaleString()} views •{" "}
-                    {new Date(video.createdAt).toDateString()}
-                  </p>
-                </div>
-              </Link>
-            ))}
+                      {isOwnChannel && (
+                        <div className="flex gap-2 mt-3">
+                          <Link
+                            to={`/edit-video/${video._id}`}
+                            className="px-3 py-1 bg-blue-600 rounded text-sm"
+                          >
+                            Edit
+                          </Link>
+
+                          <button
+                            onClick={() => handleDeleteVideo(video._id)}
+                            className="px-3 py-1 bg-red-600 rounded text-sm"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ABOUT TAB */}
+        {activeTab === "about" && (
+          <div className="bg-gray-900 rounded-xl p-6">
+            <h3 className="text-xl font-semibold mb-4">About</h3>
+
+            <p className="text-gray-400 mb-2">
+              Channel Name: <span className="text-white">{channel.username}</span>
+            </p>
+
+            <p className="text-gray-400 mb-2">
+              Subscribers: {subscribersCount.toLocaleString()}
+            </p>
+
+            <p className="text-gray-500">
+              Joined on {new Date(channel.createdAt).toDateString()}
+            </p>
           </div>
         )}
       </div>

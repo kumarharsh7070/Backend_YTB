@@ -21,19 +21,28 @@ const EditProfile = () => {
 
   /* ================= UPDATE ACCOUNT DETAILS ================= */
   const handleUpdateDetails = async () => {
-    setLoading(true);
-    try {
-      await api.patch("/users/update-account", {
-        username,
-        email,
-      });
-      setMessage("Account details updated successfully ✅");
-    } catch {
-      setMessage("Failed to update account details ❌");
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  setMessage("");
+
+  try {
+    console.log("UPDATE PAYLOAD:", { username, email }); // 👈 debug
+
+    await api.patch("/users/update-account", {
+      username,
+      email,
+    });
+
+    setMessage("Account details updated successfully ✅");
+  } catch (err) {
+    setMessage(
+      err.response?.data?.message ||
+      "Failed to update account details ❌"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   /* ================= UPDATE AVATAR ================= */
   const handleAvatarUpload = async () => {

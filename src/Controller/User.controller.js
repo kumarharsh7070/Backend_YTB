@@ -236,30 +236,30 @@ const getCurrentUser = asyncHandler(async(req ,res)=>{
     .json(new ApiResponse(200, req.user, "current user fetch successfully")
 )})
 
-const updateAccountDetails = asyncHandler(async(req,res)=>{
-    const {fullName, email}= req.body
-    
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { username, email } = req.body;
 
-    if(!fullName || !email){
-        throw new ApiError(400, "All filed are require")
-    }
+  // ✅ allow partial updates
+  if (!username && !email) {
+    throw new ApiError(400, "At least one field is required");
+  }
 
-   const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
-            $set:{
-                fullName: fullName,
-               email: email.toLowerCase()
-            }
-        },
-        {new:true}
-    ).select("-password")
+  const updateFields = {};
 
-    return res
-    .status(200)
-    .json(new ApiResponse(200, user, "Account details updated successfully"))
+  if (username) updateFields.username = username;
+  if (email) updateFields.email = email;
 
-})
+  const updatedUser = await User.findByIdAndUpdate(
+    req.user._id,
+    { $set: updateFields },
+    { new: true, runValidators: true }
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedUser, "Account updated successfully")
+  );
+});
+
 
 const updateUserAvatar = asyncHandler(async(req,res)=>{
     const avatarLocalPath = req.file?.path

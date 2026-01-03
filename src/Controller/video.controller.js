@@ -3,7 +3,11 @@ import fs from "fs";
 import { Video } from "../models/video.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
+import { v2 as cloudinary } from "cloudinary";
+
+
+
 
 // GET all videos with pagination, aggregation, and optional query
 const getAllvideo = asyncHandler(async (req, res) => {
@@ -159,99 +163,104 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  const userId = req.user && req. user._id;
+  const userId = req.user?._id;
+
+  // 🔐 Auth guard
+  if (!userId) {
+    return res.status(401).json(
+      new ApiResponse(401, null, "Unauthorized request")
+    );
+  }
 
   // 1️⃣ Validate videoId
   if (!isValidObjectId(videoId)) {
-    return res
-      .status(400)
-      .json(new ApiResponse(400, null, "Invalid video ID"));
+    return res.status(400).json(
+      new ApiResponse(400, null, "Invalid video ID")
+    );
   }
 
   // 2️⃣ Find video
   const video = await Video.findById(videoId);
   if (!video) {
-    return res
-      .status(404)
-      .json(new ApiResponse(404, null, "Video not found"));
+    return res.status(404).json(
+      new ApiResponse(404, null, "Video not found")
+    );
   }
 
-  // 3️⃣ Check if logged-in user is the owner
+  // 3️⃣ Ownership check
   if (video.owner.toString() !== userId.toString()) {
-    return res
-      .status(403)
-      .json(new ApiResponse(403, null, "You are not authorized to update this video"));
+    return res.status(403).json(
+      new ApiResponse(403, null, "You are not authorized to update this video")
+    );
   }
 
-  // 4️⃣ Extract updatable fields from request body
-  const { title, description, duration, isPublished } = req.body;
+  // 4️⃣ Allowed updates
+  const { title, description, isPublished } = req.body;
   const updates = {};
+
   if (title) updates.title = title;
   if (description) updates.description = description;
-  if (duration) updates.duration = duration;
-  if (typeof isPublished !== "undefined") updates.isPublished = isPublished;
-
-  // 5️⃣ Handle file uploads (if provided)
-  try {
-    if (req.files) {
-      // --- Handle new thumbnail ---
-      if (req.files.thumbnail && req.files.thumbnail.length > 0) {
-        const file = req.files.thumbnail[0];
-        const uploadedThumb = await uploadOnCloudinary(file.path, "thumbnails");
-
-        // Remove local temp file
-        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-
-        // Delete old Cloudinary thumbnail (if exists)
-        if (video.thumbnailPublicId) {
-          await cloudinary.v2.uploader.destroy(video.thumbnailPublicId, {
-            resource_type: "image",
-          });
-        }
-
-        // Save new thumbnail info
-        updates.thumbnail = uploadedThumb.secure_url;
-        updates.thumbnailPublicId = uploadedThumb.public_id;
-      }
-
-      // --- Handle new video file ---
-      if (req.files.videoFile && req.files.videoFile.length > 0) {
-        const file = req.files.videoFile[0];
-        const uploadedVideo = await uploadOnCloudinary(file.path, "videos");
-
-        // Remove local temp file
-        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-
-        // Delete old Cloudinary video (if exists)
-        if (video.videoPublicId) {
-          await cloudinary.v2.uploader.destroy(video.videoPublicId, {
-            resource_type: "video",
-          });
-        }
-
-        // Save new video info
-        updates.videoFile = uploadedVideo.secure_url;
-        updates.videoPublicId = uploadedVideo.public_id;
-      }
-    }
-  } catch (err) {
-    console.error("File upload or cleanup error:", err);
-    return res
-      .status(500)
-      .json(new ApiResponse(500, null, "Error uploading or replacing media"));
+  if (typeof isPublished === "boolean") {
+    updates.isPublished = isPublished;
   }
 
-  // 6️⃣ Update video in DB
+  // 5️⃣ Handle media updates
+  try {
+  if (req.files && Object.keys(req.files).length > 0) {
+
+    // 🖼 Thumbnail
+    if (req.files.thumbnail?.length) {
+      const file = req.files.thumbnail[0];
+      const uploadedThumb = await uploadOnCloudinary(file.path, "thumbnails");
+
+      // delete old thumbnail
+      if (video.thumbnailPublicId) {
+        await deleteFromCloudinary(video.thumbnailPublicId, "image");
+      }
+
+      updates.thumbnail = uploadedThumb.secure_url;
+      updates.thumbnailPublicId = uploadedThumb.public_id;
+    }
+
+    // 🎥 Video file
+    if (req.files.videoFile?.length) {
+      const file = req.files.videoFile[0];
+      const uploadedVideo = await uploadOnCloudinary(file.path, "videos");
+
+      // delete old video
+      if (video.videoPublicId) {
+        await deleteFromCloudinary(video.videoPublicId, "video");
+      }
+
+      updates.videoFile = uploadedVideo.secure_url;
+      updates.videoPublicId = uploadedVideo.public_id;
+    }
+  }
+} catch (error) {
+  console.error("Media replace error:", error);
+  return res.status(500).json(
+    new ApiResponse(500, null, "Error uploading or replacing media")
+  );
+}
+
+  // 🚫 No update data
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json(
+      new ApiResponse(400, null, "No valid fields provided for update")
+    );
+  }
+
+  // 6️⃣ Save updates
   const updatedVideo = await Video.findByIdAndUpdate(
     videoId,
     { $set: updates },
     { new: true }
-  ).populate("owner", "name email");
+  ).populate("owner", "username email avatar");
 
-  // 7️⃣ Respond with updated data
-  return res
-    .status(200)
-    .json(new ApiResponse(200, updatedVideo, "Video updated successfully"));
+  // 7️⃣ Response
+  return res.status(200).json(
+    new ApiResponse(200, updatedVideo, "Video updated successfully")
+  );
 });
 
 //  delete video
