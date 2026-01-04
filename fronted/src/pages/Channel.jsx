@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import PlaylistsTab from "../pages/PlaylistsTab";
 import api from "../api/axios";
 
 const Channel = () => {
@@ -15,7 +16,7 @@ const Channel = () => {
   const [subLoading, setSubLoading] = useState(false);
 
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("videos"); // ✅ TAB STATE
+  const [activeTab, setActiveTab] = useState("videos"); // videos | playlists | about
 
   /* ================= FETCH CURRENT USER ================= */
   useEffect(() => {
@@ -50,7 +51,7 @@ const Channel = () => {
       .catch(() => setVideos([]));
   }, [channel]);
 
-  /* ================= SUBSCRIBE / UNSUBSCRIBE ================= */
+  /* ================= SUBSCRIBE ================= */
   const handleSubscribe = async () => {
     if (!token) return alert("Please login");
 
@@ -126,17 +127,17 @@ const Channel = () => {
           <div className="flex gap-3">
             {isOwnChannel ? (
               <>
-                <Link
-                  to="/upload"
-                  className="px-5 py-2 bg-indigo-600 rounded hover:bg-indigo-700"
-                >
+                <Link to="/upload" className="px-5 py-2 bg-indigo-600 rounded">
                   Upload
                 </Link>
+                 <Link
+      to="/create-playlist"
+      className="px-5 py-2 bg-gray-800 rounded hover:bg-gray-700"
+    >
+      Create Playlist
+    </Link>
 
-                <Link
-                  to="/edit-profile"
-                  className="px-5 py-2 bg-gray-800 rounded hover:bg-gray-700"
-                >
+                <Link to="/edit-profile" className="px-5 py-2 bg-gray-800 rounded">
                   Edit Profile
                 </Link>
               </>
@@ -150,11 +151,7 @@ const Channel = () => {
                     : "bg-red-600 hover:bg-red-700"
                 }`}
               >
-                {subLoading
-                  ? "Please wait..."
-                  : isSubscribed
-                  ? "Subscribed"
-                  : "Subscribe"}
+                {subLoading ? "Please wait..." : isSubscribed ? "Subscribed" : "Subscribe"}
               </button>
             )}
           </div>
@@ -163,103 +160,76 @@ const Channel = () => {
 
       {/* ================= TABS ================= */}
       <div className="max-w-6xl mx-auto px-6 mt-8 border-b border-gray-800 flex gap-8">
-        <button
-          onClick={() => setActiveTab("videos")}
-          className={`pb-3 ${
-            activeTab === "videos"
-              ? "border-b-2 border-white text-white"
-              : "text-gray-400"
-          }`}
-        >
-          Videos
-        </button>
-
-        <button
-          onClick={() => setActiveTab("about")}
-          className={`pb-3 ${
-            activeTab === "about"
-              ? "border-b-2 border-white text-white"
-              : "text-gray-400"
-          }`}
-        >
-          About
-        </button>
+        {["videos", "playlists", "about"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-3 capitalize ${
+              activeTab === tab
+                ? "border-b-2 border-white text-white"
+                : "text-gray-400"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {/* ================= TAB CONTENT ================= */}
       <div className="max-w-6xl mx-auto p-8">
 
-        {/* VIDEOS TAB */}
+        {/* VIDEOS */}
         {activeTab === "videos" && (
-          <>
-            {videos.length === 0 ? (
-              <p className="text-gray-400">No videos uploaded yet</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {videos.map((video) => (
-                  <div
-                    key={video._id}
-                    className="bg-gray-900 rounded-lg overflow-hidden hover:scale-105 transition"
-                  >
-                    <Link to={`/watch/${video._id}`}>
-                      <img
-                        src={video.thumbnail}
-                        alt={video.title}
-                        className="w-full h-40 object-cover"
-                      />
-                    </Link>
+          videos.length === 0 ? (
+            <p className="text-gray-400">No videos uploaded yet</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {videos.map((video) => (
+                <div key={video._id} className="bg-gray-900 rounded-lg overflow-hidden">
+                  <Link to={`/watch/${video._id}`}>
+                    <img src={video.thumbnail} alt={video.title} className="w-full h-40 object-cover" />
+                  </Link>
 
-                    <div className="p-4">
-                      <h3 className="font-semibold truncate">{video.title}</h3>
+                  <div className="p-4">
+                    <h3 className="font-semibold truncate">{video.title}</h3>
 
-                      <p className="text-sm text-gray-400 mt-1">
-                        {(video.views || 0).toLocaleString()} views •{" "}
-                        {new Date(video.createdAt).toDateString()}
-                      </p>
-
-                      {isOwnChannel && (
-                        <div className="flex gap-2 mt-3">
-                          <Link
-                            to={`/edit-video/${video._id}`}
-                            className="px-3 py-1 bg-blue-600 rounded text-sm"
-                          >
-                            Edit
-                          </Link>
-
-                          <button
-                            onClick={() => handleDeleteVideo(video._id)}
-                            className="px-3 py-1 bg-red-600 rounded text-sm"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {isOwnChannel && (
+                      <div className="flex gap-2 mt-3">
+                        <Link to={`/edit-video/${video._id}`} className="px-3 py-1 bg-blue-600 rounded text-sm">
+                          Edit
+                        </Link>
+                        <button
+                          onClick={() => handleDeleteVideo(video._id)}
+                          className="px-3 py-1 bg-red-600 rounded text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-          </>
+                </div>
+              ))}
+            </div>
+          )
         )}
 
-        {/* ABOUT TAB */}
+        {/* PLAYLISTS */}
+        {activeTab === "playlists" && (
+  <PlaylistsTab
+    channelId={channel._id}
+    isOwnChannel={isOwnChannel}
+  />
+)}
+
+        {/* ABOUT */}
         {activeTab === "about" && (
           <div className="bg-gray-900 rounded-xl p-6">
-            <h3 className="text-xl font-semibold mb-4">About</h3>
-
-            <p className="text-gray-400 mb-2">
-              Channel Name: <span className="text-white">{channel.username}</span>
-            </p>
-
-            <p className="text-gray-400 mb-2">
-              Subscribers: {subscribersCount.toLocaleString()}
-            </p>
-
-            <p className="text-gray-500">
-              Joined on {new Date(channel.createdAt).toDateString()}
-            </p>
+            <p>Channel: {channel.username}</p>
+            <p>Subscribers: {subscribersCount}</p>
+            <p>Joined: {new Date(channel.createdAt).toDateString()}</p>
           </div>
         )}
+
       </div>
     </div>
   );

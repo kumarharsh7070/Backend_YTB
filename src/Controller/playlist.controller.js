@@ -191,7 +191,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
     });
   }
 
-  await playlist.remove();
+    await Playlist.findByIdAndDelete(playlistId);
 
   return res.status(200).json({
     success: true,
