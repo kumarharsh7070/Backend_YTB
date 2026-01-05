@@ -1,27 +1,33 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import {
+  getVideoComments,
+  addComment,
+  updateComment,
+  deleteComment,
+} from "../services/comment.service";
 import api from "../api/axios";
 
 const WatchVideo = () => {
   const { videoId } = useParams();
   const navigate = useNavigate();
-
   const token = localStorage.getItem("token");
 
+  /* ================= STATES ================= */
   const [video, setVideo] = useState(null);
-  const [user, setUser] = useState(null);
-
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscribersCount, setSubscribersCount] = useState(0);
-  const [subLoading, setSubLoading] = useState(false);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [user, setUser] = useState(null);
+
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingText, setEditingText] = useState("");
 
   /* ================= FETCH CURRENT USER ================= */
   useEffect(() => {
     if (!token) return;
-
     api
       .get("/users/current-user")
       .then((res) => setUser(res.data.data))
@@ -37,55 +43,54 @@ const WatchVideo = () => {
       .finally(() => setLoading(false));
   }, [videoId]);
 
-  /* ================= FETCH SUBSCRIBER COUNT ================= */
+  /* ================= FETCH COMMENTS ================= */
   useEffect(() => {
-    if (!video?.owner?._id) return;
-
-    api
-      .get(`/subscriptions/subscribers/${video.owner._id}`)
+    getVideoComments(videoId)
       .then((res) => {
-        setSubscribersCount(res.data.totalSubscribers || 0);
+        setComments(Array.isArray(res?.data?.data) ? res.data.data : []);
       })
-      .catch(() => setSubscribersCount(0));
-  }, [video]);
+      .catch(() => setComments([]));
+  }, [videoId]);
 
-  /* ================= CHECK IF USER IS SUBSCRIBED ================= */
-  useEffect(() => {
-    if (!user?._id || !video?.owner?._id) return;
-
-    api
-      .get(`/subscriptions/subscribed/${user._id}`)
-      .then((res) => {
-        const channels = res.data.subscribedChannels || [];
-        const subscribed = channels.some(
-          (ch) => ch._id === video.owner._id
-        );
-        setIsSubscribed(subscribed);
-      })
-      .catch(() => setIsSubscribed(false));
-  }, [user, video]);
-
-  /* ================= SUBSCRIBE / UNSUBSCRIBE ================= */
-  const handleSubscribe = async () => {
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-
-    setSubLoading(true);
+  /* ================= ADD COMMENT ================= */
+  const handleAddComment = async () => {
+    if (!token) return navigate("/login");
+    if (!newComment.trim()) return;
 
     try {
-      await api.post(`/subscriptions/${video.owner._id}`);
-
-      // instant UI update
-      setIsSubscribed((prev) => !prev);
-      setSubscribersCount((prev) =>
-        isSubscribed ? Math.max(prev - 1, 0) : prev + 1
-      );
+      const res = await addComment(videoId, newComment);
+      setComments((prev) => [res.data.data, ...prev]);
+      setNewComment("");
     } catch {
-      alert("Failed to update subscription");
-    } finally {
-      setSubLoading(false);
+      alert("Failed to add comment");
+    }
+  };
+
+  /* ================= UPDATE COMMENT ================= */
+  const handleUpdateComment = async (commentId) => {
+    if (!editingText.trim()) return;
+
+    try {
+      const res = await updateComment(commentId, editingText);
+      setComments((prev) =>
+        prev.map((c) => (c._id === commentId ? res.data.data : c))
+      );
+      setEditingCommentId(null);
+      setEditingText("");
+    } catch {
+      alert("Failed to update comment");
+    }
+  };
+
+  /* ================= DELETE COMMENT ================= */
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm("Delete this comment?")) return;
+
+    try {
+      await deleteComment(commentId);
+      setComments((prev) => prev.filter((c) => c._id !== commentId));
+    } catch {
+      alert("Failed to delete comment");
     }
   };
 
@@ -101,80 +106,111 @@ const WatchVideo = () => {
   if (error || !video) {
     return (
       <div className="min-h-screen flex items-center justify-center text-red-400">
-        {error || "Video not found"}
+        {error}
       </div>
     );
   }
-
-  const isOwnChannel = user?._id === video?.owner?._id;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-6">
       <div className="max-w-5xl mx-auto">
 
-        {/* 🎬 VIDEO PLAYER */}
-        <div className="rounded-lg overflow-hidden mb-6">
-          <video
-            src={video.videoFile}
-            controls
-            autoPlay
-            className="w-full max-h-[500px] bg-black"
-          />
-        </div>
+        {/* VIDEO */}
+        <video
+          src={video.videoFile}
+          controls
+          className="w-full max-h-[500px] bg-black rounded mb-4"
+        />
 
-        {/* 📝 VIDEO DETAILS */}
-        <h1 className="text-2xl font-bold mb-2">{video.title}</h1>
+        <h1 className="text-2xl font-bold">{video.title}</h1>
 
-        <p className="text-gray-400 mb-4">
+        <p className="text-gray-400 mb-6">
           {(video.views || 0).toLocaleString()} views •{" "}
           {new Date(video.createdAt).toDateString()}
         </p>
 
-        {/* 👤 CHANNEL INFO + SUBSCRIBE */}
-        <div className="flex items-center justify-between mt-6 mb-6">
-          {video.owner?._id && (
-            <Link to={`/channel/${video.owner.username}`}
-              className="flex items-center gap-4"
-            >
-              <img
-                src={video.owner.avatar}
-                alt="channel"
-                className="w-12 h-12 rounded-full object-cover"
-              />
-              <div>
-                <p className="font-semibold hover:underline">
-                  {video.owner.username}
-                </p>
-                <p className="text-sm text-gray-400 flex items-center gap-1">
-                  👤 {subscribersCount.toLocaleString()} subscribers
-                </p>
+        {/* COMMENTS */}
+        <h2 className="text-lg font-semibold mb-4">
+          {comments.length} Comments
+        </h2>
+
+        <textarea
+          disabled={!token}
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          className="w-full bg-gray-800 p-3 rounded"
+          placeholder={token ? "Add a comment..." : "Login to comment"}
+        />
+
+        <button
+          onClick={handleAddComment}
+          className="mt-2 px-4 py-2 bg-blue-600 rounded"
+        >
+          Comment
+        </button>
+
+        <div className="space-y-4 mt-6">
+          {comments.filter(Boolean).map((comment) => (
+            <div key={comment._id} className="bg-gray-900 p-4 rounded">
+
+              <div className="flex items-center gap-3">
+                <img
+                  src={comment.user?.avatar || "/default-avatar.png"}
+                  className="w-8 h-8 rounded-full"
+                  alt="user"
+                />
+                <span className="font-semibold">
+                  {comment.user?.username || "Unknown User"}
+                </span>
               </div>
-            </Link>
-          )}
 
-          {/* 🚫 Hide Subscribe button for own channel */}
-          {!isOwnChannel && (
-            <button
-              onClick={handleSubscribe}
-              disabled={subLoading}
-              className={`px-5 py-2 rounded font-semibold transition ${
-                isSubscribed
-                  ? "bg-gray-700 text-white"
-                  : "bg-red-600 hover:bg-red-700 text-white"
-              } ${subLoading ? "opacity-70 cursor-not-allowed" : ""}`}
-            >
-              {subLoading
-                ? "Please wait..."
-                : isSubscribed
-                ? "Subscribed"
-                : "Subscribe"}
-            </button>
-          )}
-        </div>
+              {editingCommentId === comment._id ? (
+                <>
+                  <textarea
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    className="w-full bg-gray-800 p-2 rounded mt-2"
+                  />
+                  <div className="flex gap-3 mt-2">
+                    <button
+                      onClick={() => handleUpdateComment(comment._id)}
+                      className="text-blue-400"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingCommentId(null)}
+                      className="text-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-gray-300 mt-2">{comment.content}</p>
+              )}
 
-        {/* 📄 DESCRIPTION */}
-        <div className="bg-gray-900 p-4 rounded-lg">
-          <p className="text-gray-300">{video.description}</p>
+              {user?._id === comment.user?._id && (
+                <div className="flex gap-4 mt-2 text-sm">
+                  <button
+                    onClick={() => {
+                      setEditingCommentId(comment._id);
+                      setEditingText(comment.content);
+                    }}
+                    className="text-blue-400"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteComment(comment._id)}
+                    className="text-red-400"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
       </div>

@@ -28,7 +28,7 @@ app.use('/api/v1/users',UserRoutes);
 app.use('/api/v1/videos', VideoRoutes); 
 app.use('/api/v1/subscriptions',ToggleRoutes);
 app.use("/api/v1/likes", Liketoggle)
-app.use("/api/v1/comment",Comment)
+app.use("/api/v1/comments",Comment)
 app.use("/api/v1/playlists", Playlist);
 app.use("/api/v1/tweet",Tweetroutes)
 
