@@ -6,6 +6,7 @@ import {
   updateComment,
   deleteComment,
 } from "../services/comment.service";
+import { toggleVideoLike, toggleCommentLike } from "../services/like.service";
 import api from "../api/axios";
 
 const WatchVideo = () => {
@@ -13,13 +14,19 @@ const WatchVideo = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
-  /* ================= STATES ================= */
+  /* ================= VIDEO ================= */
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  /* ================= VIDEO LIKE ================= */
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+
+  /* ================= USER ================= */
   const [user, setUser] = useState(null);
 
+  /* ================= COMMENTS ================= */
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState(null);
@@ -28,6 +35,7 @@ const WatchVideo = () => {
   /* ================= FETCH CURRENT USER ================= */
   useEffect(() => {
     if (!token) return;
+
     api
       .get("/users/current-user")
       .then((res) => setUser(res.data.data))
@@ -38,10 +46,23 @@ const WatchVideo = () => {
   useEffect(() => {
     api
       .get(`/videos/${videoId}`)
-      .then((res) => setVideo(res.data.data))
+      .then((res) => {
+        setVideo(res.data.data);
+        setLikesCount(res.data.data.likesCount || 0);
+      })
       .catch(() => setError("Video not found"))
       .finally(() => setLoading(false));
   }, [videoId]);
+
+  /* ================= FETCH VIDEO LIKE STATUS ================= */
+  useEffect(() => {
+    if (!video?._id || !token) return;
+
+    api
+      .get(`/likes/video-status/${video._id}`)
+      .then((res) => setIsLiked(res.data.isLiked))
+      .catch(() => {});
+  }, [video, token]);
 
   /* ================= FETCH COMMENTS ================= */
   useEffect(() => {
@@ -59,7 +80,16 @@ const WatchVideo = () => {
 
     try {
       const res = await addComment(videoId, newComment);
-      setComments((prev) => [res.data.data, ...prev]);
+
+      setComments((prev) => [
+        {
+          ...res.data.data,
+          isLiked: false,
+          likesCount: 0,
+        },
+        ...prev,
+      ]);
+
       setNewComment("");
     } catch {
       alert("Failed to add comment");
@@ -72,9 +102,13 @@ const WatchVideo = () => {
 
     try {
       const res = await updateComment(commentId, editingText);
+
       setComments((prev) =>
-        prev.map((c) => (c._id === commentId ? res.data.data : c))
+        prev.map((c) =>
+          c._id === commentId ? { ...c, content: editingText } : c
+        )
       );
+
       setEditingCommentId(null);
       setEditingText("");
     } catch {
@@ -91,6 +125,47 @@ const WatchVideo = () => {
       setComments((prev) => prev.filter((c) => c._id !== commentId));
     } catch {
       alert("Failed to delete comment");
+    }
+  };
+
+  /* ================= VIDEO LIKE ================= */
+  const handleVideoLike = async () => {
+    if (!token) return navigate("/login");
+
+    try {
+      await toggleVideoLike(video._id);
+
+      setIsLiked((prev) => !prev);
+      setLikesCount((prev) =>
+        isLiked ? Math.max(prev - 1, 0) : prev + 1
+      );
+    } catch {
+      alert("Failed to like video");
+    }
+  };
+
+  /* ================= COMMENT LIKE ================= */
+  const handleCommentLike = async (commentId) => {
+    if (!token) return navigate("/login");
+
+    try {
+      await toggleCommentLike(commentId);
+
+      setComments((prev) =>
+        prev.map((c) =>
+          c._id === commentId
+            ? {
+                ...c,
+                isLiked: !c.isLiked,
+                likesCount: c.isLiked
+                  ? Math.max((c.likesCount || 1) - 1, 0)
+                  : (c.likesCount || 0) + 1,
+              }
+            : c
+        )
+      );
+    } catch {
+      alert("Failed to like comment");
     }
   };
 
@@ -124,10 +199,20 @@ const WatchVideo = () => {
 
         <h1 className="text-2xl font-bold">{video.title}</h1>
 
-        <p className="text-gray-400 mb-6">
+        <p className="text-gray-400 mb-4">
           {(video.views || 0).toLocaleString()} views •{" "}
           {new Date(video.createdAt).toDateString()}
         </p>
+
+        {/* VIDEO LIKE */}
+        <button
+          onClick={handleVideoLike}
+          className={`mb-6 px-4 py-2 rounded ${
+            isLiked ? "bg-blue-600" : "bg-gray-700"
+          }`}
+        >
+          👍 {likesCount}
+        </button>
 
         {/* COMMENTS */}
         <h2 className="text-lg font-semibold mb-4">
@@ -164,12 +249,45 @@ const WatchVideo = () => {
                 </span>
               </div>
 
-              {editingCommentId === comment._id ? (
-                <>
+              <p className="text-gray-300 mt-2">{comment.content}</p>
+
+              <div className="flex items-center gap-6 mt-3 text-sm text-gray-400">
+                {/* COMMENT LIKE */}
+                <button
+                  onClick={() => handleCommentLike(comment._id)}
+                  className={comment.isLiked ? "text-blue-400" : ""}
+                >
+                  👍 {comment.likesCount || 0}
+                </button>
+
+                {user?._id === comment.user?._id && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setEditingCommentId(comment._id);
+                        setEditingText(comment.content);
+                      }}
+                      className="text-blue-400"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteComment(comment._id)}
+                      className="text-red-400"
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {editingCommentId === comment._id && (
+                <div className="mt-3">
                   <textarea
                     value={editingText}
                     onChange={(e) => setEditingText(e.target.value)}
-                    className="w-full bg-gray-800 p-2 rounded mt-2"
+                    className="w-full bg-gray-800 p-2 rounded"
                   />
                   <div className="flex gap-3 mt-2">
                     <button
@@ -185,28 +303,6 @@ const WatchVideo = () => {
                       Cancel
                     </button>
                   </div>
-                </>
-              ) : (
-                <p className="text-gray-300 mt-2">{comment.content}</p>
-              )}
-
-              {user?._id === comment.user?._id && (
-                <div className="flex gap-4 mt-2 text-sm">
-                  <button
-                    onClick={() => {
-                      setEditingCommentId(comment._id);
-                      setEditingText(comment.content);
-                    }}
-                    className="text-blue-400"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteComment(comment._id)}
-                    className="text-red-400"
-                  >
-                    Delete
-                  </button>
                 </div>
               )}
             </div>
