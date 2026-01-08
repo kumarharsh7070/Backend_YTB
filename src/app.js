@@ -23,6 +23,8 @@ import Liketoggle from "./routes/like.routes.js"
 import Comment from "./routes/comment.routes.js"
 import  Playlist  from "./routes/playlist.routes.js"
 import  Tweetroutes  from './routes/tweet.routes.js'
+import notificationRoutes from "./routes/notification.routes.js";
+
 // router declare
 app.use('/api/v1/users',UserRoutes);
 app.use('/api/v1/videos', VideoRoutes); 
@@ -31,6 +33,8 @@ app.use("/api/v1/likes", Liketoggle)
 app.use("/api/v1/comments",Comment)
 app.use("/api/v1/playlists", Playlist);
 app.use("/api/v1/tweet",Tweetroutes)
+app.use("/api/v1/notifications", notificationRoutes);
+
 
 // to test only for fronted api
 

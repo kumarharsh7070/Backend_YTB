@@ -3,6 +3,8 @@ import { Video } from "../models/video.model.js";
 import { Comment } from "../models/comment.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { Notification } from "../models/notification.model.js";
+
 
 /* ================= GET COMMENTS ================= */
 const getVideoComments = asyncHandler(async (req, res) => {
@@ -44,6 +46,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
 });
 
 /* ================= ADD COMMENT ================= */
+/* ================= ADD COMMENT ================= */
 const addComment = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const { content } = req.body;
@@ -55,12 +58,34 @@ const addComment = asyncHandler(async (req, res) => {
     });
   }
 
+  // ✅ Fetch video (IMPORTANT)
+  const video = await Video.findById(videoId);
+  if (!video) {
+    return res.status(404).json({
+      success: false,
+      message: "Video not found",
+    });
+  }
+
+  // ✅ Create comment
   const comment = await Comment.create({
     content,
     video: videoId,
-    user: req.user._id, // ✅ FIXED
+    user: req.user._id,
   });
 
+  // ✅ Create notification for video owner
+  // (avoid self-notification)
+  if (video.owner.toString() !== req.user._id.toString()) {
+    await Notification.create({
+      receiver: video.owner,
+      sender: req.user._id,
+      type: "COMMENT",
+      video: video._id,
+    });
+  }
+
+  // ✅ Populate user
   const populatedComment = await comment.populate(
     "user",
     "username avatar"
@@ -135,6 +160,8 @@ const deleteComment = asyncHandler(async (req, res) => {
     message: "Comment deleted successfully",
   });
 });
+
+
 
 export {
   getVideoComments,

@@ -1,15 +1,19 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import NotificationBell from "./NotificationBell";
+
 import api from "../api/axios";
 
 const Home = () => {
   const navigate = useNavigate();
-
   const token = localStorage.getItem("token");
-  const [user, setUser] = useState(null);
 
+  const [user, setUser] = useState(null);
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
+
+  // 🔍 SEARCH STATE
+  const [search, setSearch] = useState("");
 
   // ================= FETCH CURRENT USER =================
   useEffect(() => {
@@ -17,9 +21,7 @@ const Home = () => {
 
     api
       .get("/users/current-user")
-      .then((res) => {
-        setUser(res.data?.data || null);
-      })
+      .then((res) => setUser(res.data?.data || null))
       .catch(() => {
         localStorage.removeItem("token");
         setUser(null);
@@ -27,19 +29,29 @@ const Home = () => {
   }, [token]);
 
   // ================= FETCH VIDEOS =================
-  useEffect(() => {
+  const fetchVideos = (searchQuery = "") => {
+    setLoadingVideos(true);
+
     api
-      .get("/videos")
+      .get("/videos", {
+        params: searchQuery ? { query: searchQuery } : {},
+      })
       .then((res) => {
-        if (Array.isArray(res.data?.data?.docs)) {
-          setVideos(res.data.data.docs);
-        } else {
-          setVideos([]);
-        }
+        setVideos(res.data?.data?.docs || []);
       })
       .catch(() => setVideos([]))
       .finally(() => setLoadingVideos(false));
+  };
+
+  useEffect(() => {
+    fetchVideos();
   }, []);
+
+  // ================= SEARCH =================
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchVideos(search);
+  };
 
   // ================= LOGOUT =================
   const handleLogout = () => {
@@ -52,10 +64,29 @@ const Home = () => {
     <div className="min-h-screen bg-gray-950 text-white">
 
       {/* ================= NAVBAR ================= */}
-      <header className="flex justify-between items-center px-8 py-4 border-b border-gray-800">
-        <h1 className="text-2xl font-bold text-red-600">
+      <header className="flex flex-wrap gap-4 justify-between items-center px-8 py-4 border-b border-gray-800">
+
+        <h1 className="text-2xl font-bold text-red-600 cursor-pointer"
+            onClick={() => fetchVideos()}>
           YouTubeClone
         </h1>
+
+        {/* 🔍 SEARCH BAR */}
+        <form onSubmit={handleSearch} className="flex flex-1 max-w-xl">
+          <input
+            type="text"
+            placeholder="Search videos..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-4 py-2 bg-gray-800 rounded-l outline-none"
+          />
+          <button
+            type="submit"
+            className="px-6 bg-red-600 rounded-r hover:bg-red-700"
+          >
+            Search
+          </button>
+        </form>
 
         {!token ? (
           <div className="space-x-4">
@@ -67,57 +98,54 @@ const Home = () => {
             </Link>
           </div>
         ) : (
-          <div className="flex items-center gap-4">
+         <div className="flex items-center gap-4">
 
-            {/* 👤 USER → CHANNEL PAGE */}
-            {user && (
-              <Link
-                to={`/channel/${user.username}`}
-                className="flex items-center gap-2 hover:bg-gray-800 px-3 py-1 rounded transition"
-              >
-                <img
-                  src={user.avatar}
-                  alt="avatar"
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-                <span className="text-sm font-medium">
-                  {user.username}
-                </span>
-              </Link>
-            )}
+  {/* 🔔 Notification Bell */}
+  <NotificationBell />
 
-            {/* Upload */}
-          
+  {/* 👤 User Profile */}
+  {user && (
+    <Link
+      to={`/channel/${user.username}`}
+      className="flex items-center gap-2 hover:bg-gray-800 px-3 py-1 rounded"
+    >
+      <img
+        src={user.avatar}
+        alt="avatar"
+        className="w-8 h-8 rounded-full"
+      />
+      <span>{user.username}</span>
+    </Link>
+  )}
 
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
-            >
-              Logout
-            </button>
-          </div>
+  {/* Logout */}
+  <button
+    onClick={handleLogout}
+    className="px-4 py-2 bg-red-600 rounded"
+  >
+    Logout
+  </button>
+</div>
         )}
       </header>
 
       {/* ================= VIDEOS ================= */}
       <main className="p-8">
         <h2 className="text-2xl font-bold mb-6">
-          Latest Videos 🎬
+          {search ? `Results for "${search}"` : "Latest Videos 🎬"}
         </h2>
 
         {loadingVideos ? (
           <p className="text-gray-400">Loading videos...</p>
         ) : videos.length === 0 ? (
-          <p className="text-gray-400">No videos uploaded yet</p>
+          <p className="text-gray-400">No videos found</p>
         ) : (
           <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {videos.map((video) => (
               <div
                 key={video._id}
-                className="bg-gray-900 rounded-lg overflow-hidden shadow hover:scale-105 transition"
+                className="bg-gray-900 rounded-lg overflow-hidden hover:scale-105 transition"
               >
-                {/* Thumbnail */}
                 <Link to={`/watch/${video._id}`}>
                   <img
                     src={video.thumbnail}
@@ -126,21 +154,19 @@ const Home = () => {
                   />
                 </Link>
 
-                {/* Video info */}
                 <div className="p-4">
                   <h3 className="font-semibold truncate">
                     {video.title}
                   </h3>
 
-                  {/* Channel info */}
                   <div className="flex items-center gap-2 mt-2">
                     <img
                       src={video.ownerDetails?.avatar}
+                      className="w-6 h-6 rounded-full"
                       alt="channel"
-                      className="w-6 h-6 rounded-full object-cover"
                     />
                     <span className="text-sm text-gray-400">
-                      {video.ownerDetails?.username || "Unknown Channel"}
+                      {video.ownerDetails?.username}
                     </span>
                   </div>
 

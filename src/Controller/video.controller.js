@@ -12,10 +12,11 @@ import { v2 as cloudinary } from "cloudinary";
 // GET all videos with pagination, aggregation, and optional query
 const getAllvideo = asyncHandler(async (req, res) => {
   console.log("➡️ getAllvideo called");
+
   const {
     page = 1,
     limit = 10,
-    query,
+    query = "",
     sortBy = "createdAt",
     sortType = "desc",
     userId,
@@ -23,62 +24,78 @@ const getAllvideo = asyncHandler(async (req, res) => {
 
   const pageNum = Number(page);
   const limitNum = Number(limit);
+  const searchQuery = query.trim();
+
+  const matchStage = {
+    isPublished: true,
+  };
+
+  // ✅ Filter by channel (owner)
+  if (userId && isValidObjectId(userId)) {
+    matchStage.owner = new mongoose.Types.ObjectId(userId);
+  }
+
+  // ✅ Search by title
+  if (searchQuery) {
+    matchStage.title = { $regex: searchQuery, $options: "i" };
+  }
 
   const VideoAggregate = Video.aggregate([
+    { $match: matchStage },
+
     {
-      $match: {
-        isPublished: true,
-        ...(userId && isValidObjectId(userId) ? { owner: mongoose.Types.ObjectId(userId) } : {}),
-        ...(query ? { title: { $regex: query, $options: "i" } } : {}),
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              avatar: 1,
+              email: 1,
+            },
+          },
+        ],
       },
     },
-     {
-    $lookup: {
-      from: "users",
-      localField: "owner",
-      foreignField: "_id",
-      as: "ownerDetails",
-      pipeline: [
-        {
-          $project: {
-            username: 1,
-            avatar: 1,
-            email: 1
-          }
-        }
-      ]
-    }
-  },
-  {
-    $unwind: "$ownerDetails"
-  },
-  {
-    $sort: {
-      [sortBy]: sortType === "asc" ? 1 : -1
-    }
-  },
-  {
-    $project: {
-      _id: 1,
-      title: 1,
-      description: 1,
-      thumbnail: 1,
-      videoFile: 1,
-      views: 1,
-      duration: 1,
-      createdAt: 1,
-      ownerDetails: 1  
-    }
-  }
+
+    { $unwind: "$ownerDetails" },
+
+    {
+      $sort: {
+        [sortBy]: sortType === "asc" ? 1 : -1,
+      },
+    },
+
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        description: 1,
+        thumbnail: 1,
+        videoFile: 1,
+        views: 1,
+        duration: 1,
+        createdAt: 1,
+        ownerDetails: 1,
+      },
+    },
   ]);
 
-  const options = { page: pageNum, limit: limitNum };
+  const options = {
+    page: pageNum,
+    limit: limitNum,
+  };
+
   const result = await Video.aggregatePaginate(VideoAggregate, options);
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, result, "All videos fetched successfully"));
+  return res.status(200).json(
+    new ApiResponse(200, result, "All videos fetched successfully")
+  );
 });
+
 
 // PUBLISH a new video
 const publishAVideo = asyncHandler(async (req, res) => {
