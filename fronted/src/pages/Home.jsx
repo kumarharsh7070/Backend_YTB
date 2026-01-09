@@ -59,8 +59,11 @@ const Home = () => {
   };
 
   return (
+
     <div className="min-h-screen transition-colors bg-white text-black dark:bg-gray-950 dark:text-white">
       {/* NAVBAR */}
+     
+
       <header className="flex flex-wrap gap-4 justify-between items-center px-8 py-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
         <h1
           className="text-2xl font-bold text-red-600 cursor-pointer"

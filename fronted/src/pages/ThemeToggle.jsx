@@ -1,28 +1,17 @@
-import { createContext, useEffect, useState } from "react";
+import { useContext } from "react";
+import { ThemeContext } from "./ThemeContext";
 
-export const ThemeContext = createContext();
-
-export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(
-    localStorage.getItem("theme") || "light"
-  );
-
-  // 🔥 THIS IS THE FIX
-  useEffect(() => {
-    const html = document.documentElement;
-
-    if (theme === "dark") {
-      html.classList.add("dark");
-    } else {
-      html.classList.remove("dark");
-    }
-
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+const ThemeToggle = () => {
+  const { theme, setTheme } = useContext(ThemeContext);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <button
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      className="p-2 rounded bg-gray-200 dark:bg-gray-800"
+    >
+      {theme === "dark" ? "🌞" : "🌙"}
+    </button>
   );
 };
+
+export default ThemeToggle; // 🔥 REQUIRED
