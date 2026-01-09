@@ -52,48 +52,41 @@ const addComment = asyncHandler(async (req, res) => {
   const { content } = req.body;
 
   if (!content?.trim()) {
-    return res.status(400).json({
-      success: false,
-      message: "Comment content is required",
-    });
+    return res.status(400).json({ success: false, message: "Comment required" });
   }
 
-  // ✅ Fetch video (IMPORTANT)
   const video = await Video.findById(videoId);
   if (!video) {
-    return res.status(404).json({
-      success: false,
-      message: "Video not found",
-    });
+    return res.status(404).json({ success: false, message: "Video not found" });
   }
 
-  // ✅ Create comment
   const comment = await Comment.create({
     content,
     video: videoId,
     user: req.user._id,
   });
 
-  // ✅ Create notification for video owner
-  // (avoid self-notification)
+  console.log("📩 Creating comment notification");
+console.log("Receiver:", video.owner.toString());
+console.log("Sender:", req.user._id.toString());
+
+  // 🔔 CREATE NOTIFICATION ONLY IF NOT SELF
   if (video.owner.toString() !== req.user._id.toString()) {
     await Notification.create({
       receiver: video.owner,
       sender: req.user._id,
       type: "COMMENT",
       video: video._id,
+      comment: comment._id,
     });
   }
 
-  // ✅ Populate user
-  const populatedComment = await comment.populate(
-    "user",
-    "username avatar"
-  );
+  const populated = await comment.populate("user", "username avatar");
 
-  return res.status(201).json(
-    new ApiResponse(201, populatedComment, "Comment added successfully")
-  );
+  res.status(201).json({
+    success: true,
+    data: populated,
+  });
 });
 
 /* ================= UPDATE COMMENT ================= */

@@ -73,6 +73,17 @@ const WatchVideo = () => {
       .catch(() => setComments([]));
   }, [videoId]);
 
+  useEffect(() => {
+  if (!video?._id || !token) return;
+
+  api.get(`/likes/video-status/${video._id}`)
+    .then(res => {
+      setLikesCount(res.data.totalLikes);
+      setIsLiked(res.data.isLiked);
+    })
+    .catch(() => {});
+}, [video, token]);
+
   /* ================= ADD COMMENT ================= */
   const handleAddComment = async () => {
     if (!token) return navigate("/login");

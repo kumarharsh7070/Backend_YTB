@@ -12,30 +12,18 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
   const video = await Video.findById(videoId);
-  if (!video) {
-    return res.status(404).json({ success: false, message: "Video not found" });
+  if (!video) return res.status(404).json({ success: false });
+
+  const existing = await Like.findOne({ video: videoId, likedBy: userId });
+
+  if (existing) {
+    await Like.findByIdAndDelete(existing._id);
+    return res.json({ success: true, liked: false });
   }
 
-  const existingLike = await Like.findOne({
-    video: videoId,
-    likedBy: userId,
-  });
+  await Like.create({ video: videoId, likedBy: userId });
 
-  if (existingLike) {
-    await Like.findByIdAndDelete(existingLike._id);
-    return res.status(200).json({
-      success: true,
-      liked: false,
-      message: "Unliked the video",
-    });
-  }
-
-  await Like.create({
-    video: videoId,
-    likedBy: userId,
-  });
-
-  // 🔔 NOTIFICATION (avoid self-like)
+  // 🔔 CREATE LIKE NOTIFICATION
   if (video.owner.toString() !== userId.toString()) {
     await Notification.create({
       receiver: video.owner,
@@ -45,11 +33,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     });
   }
 
-  return res.status(201).json({
-    success: true,
-    liked: true,
-    message: "Liked the video",
-  });
+  res.status(201).json({ success: true, liked: true });
 });
 
 /* ================= COMMENT LIKE ================= */
@@ -142,10 +126,25 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     likedVideos: formatted,
   });
 });
+const getVideoLikeStatus = asyncHandler(async (req, res) => {
+  const { videoId } = req.params;
+  const userId = req.user._id;
+
+  const totalLikes = await Like.countDocuments({ video: videoId });
+  const isLiked = await Like.exists({ video: videoId, likedBy: userId });
+
+  res.json({
+    success: true,
+    totalLikes,
+    isLiked: Boolean(isLiked),
+  });
+});
+
 
 export {
   toggleVideoLike,
   toggleCommentLike,
   toggleTweetLike,
   getLikedVideos,
+  getVideoLikeStatus
 };
