@@ -5,23 +5,18 @@ import cookieParser from "cookie-parser";
 const app = express();
 
 // ✅ CORS configuration
-const allowedOrigins = [process.env.CORS_ORIGIN];
+
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // Postman / server calls
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: [
+      "http://localhost:5173",
+      "https://backend-ytb-ef65-8a21gikzw-kumar-harshs-projects-818f320c.vercel.app",
+      "https://your-vercel-frontend-url.vercel.app"
+    ],
     credentials: true,
   })
 );
-
 // ✅ Body parsers
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
